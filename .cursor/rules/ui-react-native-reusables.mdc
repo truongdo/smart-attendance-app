@@ -1,0 +1,54 @@
+---
+description: UI standards using react-native-reusables + NativeWind
+alwaysApply: true
+---
+
+# UI: react-native-reusables (NativeWind)
+
+This project’s default UI stack is **react-native-reusables + NativeWind (Tailwind)**.
+
+## Core rules
+
+- **Use `components/ui/*` first**: Prefer `@/components/ui/*` primitives (e.g. `Button`, `Text`) over ad-hoc components.
+- **Style via `className`**: Use NativeWind classes and theme tokens (e.g. `bg-background`, `text-foreground`, `bg-primary`, `text-muted-foreground`).
+- **Avoid new `StyleSheet` / inline styles** for UI composition. Keep existing ones, but new work should default to `className` unless you need non-trivial dynamic styles.
+- **Don’t use React Native’s built-in `Button`**. Use `@/components/ui/button`.
+- **Variants over forks**: If a component needs visual options, add a `variant` / `size` using `cva` in `components/ui/*`.
+- **Theme tokens only**: When choosing colors, use CSS variables-backed tokens (Tailwind `colors` in `tailwind.config.js`) instead of hardcoded hex.
+
+## Imports & file layout
+
+- **Imports**:
+  - `Button`: `import { Button } from '@/components/ui/button'`
+  - `Text`: `import { Text } from '@/components/ui/text'`
+  - class merge helper: `import { cn } from '@/lib/utils'`
+- **UI component location**: `components/ui/<component>.tsx`
+- **Non-UI shared utilities**: `lib/*`
+
+## Examples
+
+### Button + Text (preferred)
+
+```tsx
+import { Button } from '@/components/ui/button';
+import { Text } from '@/components/ui/text';
+
+export function SaveCTA({ onPress, disabled }: { onPress: () => void; disabled?: boolean }) {
+  return (
+    <Button variant="default" size="default" disabled={disabled} onPress={onPress}>
+      <Text>Lưu</Text>
+    </Button>
+  );
+}
+```
+
+### Avoid hardcoded colors (prefer tokens)
+
+```tsx
+// ✅ GOOD
+<Text className="text-muted-foreground">Mô tả</Text>
+
+// ❌ BAD
+<Text style={{ color: '#64748B' }}>Mô tả</Text>
+```
+

@@ -4,9 +4,11 @@ import Constants from 'expo-constants';
 import * as WebBrowser from 'expo-web-browser';
 import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { useEffect, useMemo, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Button } from '@/components/ui/button';
+import { Text } from '@/components/ui/text';
 import { auth } from '@/lib/firebase';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -82,17 +84,14 @@ export default function LoginScreen() {
           <Text style={styles.title}>SmartAttendance</Text>
           <Text style={styles.subtitle}>Đăng nhập để chấm công</Text>
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.button,
-              pressed && !disabled ? styles.buttonPressed : null,
-              disabled ? styles.buttonDisabled : null,
-            ]}
+          <Button
+            className={disabled ? 'opacity-55' : 'active:opacity-95'}
+            style={styles.button}
             onPress={() => promptAsync()}
             disabled={disabled}
           >
             <Text style={styles.buttonText}>{signingIn ? 'Đang đăng nhập...' : 'Đăng nhập với Google'}</Text>
-          </Pressable>
+          </Button>
 
           {/* <Text style={styles.hint}>
             Cần cấu hình OAuth Client IDs trong <Text style={styles.mono}>app.json</Text> →{' '}
@@ -138,13 +137,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#0F172A',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  buttonPressed: {
-    transform: [{ scale: 0.99 }],
-    opacity: 0.95,
-  },
-  buttonDisabled: {
-    opacity: 0.55,
   },
   buttonText: {
     color: 'white',

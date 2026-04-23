@@ -6,6 +6,7 @@ import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { auth } from '@/lib/firebase';
 import { useAuthStore } from '@/stores/authStore';
@@ -35,6 +36,7 @@ function getGoogleIosRedirectScheme(iosClientId?: string) {
 }
 
 export default function LoginScreen() {
+  const insets = useSafeAreaInsets();
   const { user, loading } = useAuthStore();
   const extra = useMemo(() => getExtra(), []);
   const [signingIn, setSigningIn] = useState(false);
@@ -75,59 +77,66 @@ export default function LoginScreen() {
   const disabled = loading || signingIn || !!user;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.title}>SmartAttendance</Text>
-        <Text style={styles.subtitle}>Đăng nhập để chấm công</Text>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+      <View style={[styles.container, { paddingBottom: Math.max(20, insets.bottom + 12) }]}>
+        <View style={styles.card}>
+          <Text style={styles.title}>SmartAttendance</Text>
+          <Text style={styles.subtitle}>Đăng nhập để chấm công</Text>
 
-        <Pressable
-          style={({ pressed }) => [styles.button, pressed && !disabled ? styles.buttonPressed : null, disabled ? styles.buttonDisabled : null]}
-          onPress={() => promptAsync()}
-          disabled={disabled}
-        >
-          <Text style={styles.buttonText}>{signingIn ? 'Đang đăng nhập...' : 'Đăng nhập với Google'}</Text>
-        </Pressable>
+          <Pressable
+            style={({ pressed }) => [
+              styles.button,
+              pressed && !disabled ? styles.buttonPressed : null,
+              disabled ? styles.buttonDisabled : null,
+            ]}
+            onPress={() => promptAsync()}
+            disabled={disabled}
+          >
+            <Text style={styles.buttonText}>{signingIn ? 'Đang đăng nhập...' : 'Đăng nhập với Google'}</Text>
+          </Pressable>
 
-        <Text style={styles.hint}>
-          Cần cấu hình OAuth Client IDs trong <Text style={styles.mono}>app.json</Text> → <Text style={styles.mono}>expo.extra.googleAuth</Text>.
-        </Text>
+          <Text style={styles.hint}>
+            Cần cấu hình OAuth Client IDs trong <Text style={styles.mono}>app.json</Text> →{' '}
+            <Text style={styles.mono}>expo.extra.googleAuth</Text>.
+          </Text>
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    justifyContent: 'center',
-    backgroundColor: '#F4F4F5',
-  },
+  safeArea: { flex: 1, backgroundColor: '#F6F7FB' },
+  container: { flex: 1, padding: 20, justifyContent: 'center', backgroundColor: '#F6F7FB' },
   card: {
     backgroundColor: 'white',
     borderRadius: 16,
     padding: 20,
     shadowColor: '#000',
     shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 3,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(15, 23, 42, 0.06)',
   },
   title: {
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    color: '#111827',
+    fontSize: 30,
+    fontWeight: '900',
+    letterSpacing: -0.6,
+    color: '#0F172A',
   },
   subtitle: {
     marginTop: 8,
     fontSize: 14,
-    color: '#6B7280',
+    color: '#64748B',
+    fontWeight: '600',
     marginBottom: 16,
   },
   button: {
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#111827',
+    backgroundColor: '#0F172A',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -141,16 +150,16 @@ const styles = StyleSheet.create({
   buttonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   hint: {
     marginTop: 12,
     fontSize: 12,
-    color: '#6B7280',
+    color: '#64748B',
     lineHeight: 16,
   },
   mono: {
-    fontFamily: 'Courier',
+    fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
   },
 });
 

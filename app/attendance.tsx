@@ -13,6 +13,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, where } from 'firebase/firestore';
 
@@ -26,6 +27,7 @@ import { connectAndDiscover, requestDeviceMac, scanAndConnectFirst } from '@/lib
 type NextType = 'in' | 'out';
 
 export default function AttendanceScreen() {
+  const insets = useSafeAreaInsets();
   const { profile } = useAuthStore();
   const managerRef = useRef<any>(null);
 
@@ -314,11 +316,17 @@ export default function AttendanceScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <View style={styles.container}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + insets.bottom }]}
+          showsVerticalScrollIndicator={false}
+        >
         <View style={styles.header}>
           <Text style={styles.title}>Chấm công</Text>
-          <Text style={styles.subtitle}>{project?.name ? `Dự án: ${project.name}` : 'Kết nối thiết bị để xác định dự án'}</Text>
+          <Text style={styles.subtitle} numberOfLines={2}>
+            {project?.name ? `Dự án: ${project.name}` : 'Kết nối thiết bị để xác định dự án'}
+          </Text>
         </View>
 
         <View style={styles.card}>
@@ -422,10 +430,10 @@ export default function AttendanceScreen() {
             </Text>
           ) : null}
         </View>
-      </ScrollView>
+        </ScrollView>
 
       <Modal transparent visible={explainOpen} animationType="fade" onRequestClose={() => setExplainOpen(false)}>
-        <View style={styles.modalBackdrop}>
+        <View style={[styles.modalBackdrop, { paddingBottom: Math.max(20, insets.bottom + 12), paddingTop: Math.max(20, insets.top + 12) }]}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Yêu cầu giải trình</Text>
             <Text style={styles.modalSubtitle}>Vui lòng nhập lý do.</Text>
@@ -452,16 +460,18 @@ export default function AttendanceScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F4F4F5' },
-  scrollContent: { padding: 16, paddingBottom: 28, gap: 12 },
-  header: { gap: 4, paddingHorizontal: 2, paddingBottom: 4 },
-  title: { fontSize: 22, fontWeight: '900', color: '#111827' },
-  subtitle: { fontSize: 12, fontWeight: '700', color: '#6B7280' },
+  safeArea: { flex: 1, backgroundColor: '#F6F7FB' },
+  container: { flex: 1, backgroundColor: '#F6F7FB' },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 12, gap: 12 },
+  header: { gap: 6, paddingHorizontal: 2, paddingBottom: 4 },
+  title: { fontSize: 24, fontWeight: '900', color: '#0F172A', letterSpacing: -0.3 },
+  subtitle: { fontSize: 13, fontWeight: '700', color: '#64748B' },
 
   card: {
     backgroundColor: 'white',
@@ -469,15 +479,18 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 12,
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(15, 23, 42, 0.06)',
   },
   cardHeader: { gap: 2 },
-  cardTitle: { fontSize: 16, fontWeight: '900', color: '#111827' },
-  cardHint: { fontSize: 12, fontWeight: '700', color: '#6B7280' },
+  cardTitle: { fontSize: 16, fontWeight: '900', color: '#0F172A' },
+  cardHint: { fontSize: 12, fontWeight: '700', color: '#64748B' },
 
-  cameraWrap: { height: 320, borderRadius: 16, overflow: 'hidden', backgroundColor: '#111827' },
+  cameraWrap: { height: 320, borderRadius: 16, overflow: 'hidden', backgroundColor: '#0F172A' },
   camera: { flex: 1 },
   cameraBlocked: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 16 },
   cameraBlockedTitle: { color: 'white', fontSize: 16, fontWeight: '900', textAlign: 'center' },
@@ -491,31 +504,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  captureButtonText: { color: '#111827', fontSize: 16, fontWeight: '900' },
+  captureButtonText: { color: '#0F172A', fontSize: 16, fontWeight: '900' },
 
   photoPreview: { flex: 1 },
   photo: { width: '100%', height: '100%' },
   photoOverlay: { position: 'absolute', left: 12, right: 12, bottom: 12, gap: 8 },
   photoOverlayText: { color: 'white', fontSize: 14, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.6)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
-  ghostButton: { height: 44, borderRadius: 14, backgroundColor: 'rgba(17,24,39,0.7)', alignItems: 'center', justifyContent: 'center' },
+  ghostButton: { height: 44, borderRadius: 14, backgroundColor: 'rgba(15,23,42,0.72)', alignItems: 'center', justifyContent: 'center' },
   ghostButtonText: { color: 'white', fontSize: 14, fontWeight: '900' },
 
   row: { flexDirection: 'row', gap: 10, alignItems: 'center' },
   kv: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, alignItems: 'center' },
-  k: { color: '#6B7280', fontSize: 12, fontWeight: '800' },
-  v: { color: '#111827', fontSize: 12, fontWeight: '800', flexShrink: 1, textAlign: 'right' },
-  vMono: { color: '#111827', fontSize: 12, fontWeight: '800', fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }), flexShrink: 1, textAlign: 'right' },
+  k: { color: '#64748B', fontSize: 12, fontWeight: '800' },
+  v: { color: '#0F172A', fontSize: 12, fontWeight: '800', flexShrink: 1, textAlign: 'right' },
+  vMono: {
+    color: '#0F172A',
+    fontSize: 12,
+    fontWeight: '800',
+    fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
+    flexShrink: 1,
+    textAlign: 'right',
+  },
 
-  primaryButton: { flex: 1, height: 48, borderRadius: 12, backgroundColor: '#111827', alignItems: 'center', justifyContent: 'center' },
+  primaryButton: { flex: 1, height: 48, borderRadius: 12, backgroundColor: '#0F172A', alignItems: 'center', justifyContent: 'center' },
   primaryButtonText: { color: 'white', fontSize: 16, fontWeight: '800' },
-  secondaryButton: { height: 48, paddingHorizontal: 16, borderRadius: 12, backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center' },
-  secondaryButtonText: { color: '#111827', fontSize: 14, fontWeight: '800' },
+  secondaryButton: { height: 48, paddingHorizontal: 16, borderRadius: 12, backgroundColor: '#EEF2F7', alignItems: 'center', justifyContent: 'center' },
+  secondaryButtonText: { color: '#0F172A', fontSize: 14, fontWeight: '800' },
   buttonDisabled: { opacity: 0.5 },
-  helperText: { marginTop: 6, color: '#6B7280', fontSize: 12, fontWeight: '700' },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', padding: 20 },
-  modalCard: { backgroundColor: 'white', borderRadius: 16, padding: 16, gap: 10 },
-  modalTitle: { fontSize: 18, fontWeight: '900', color: '#111827' },
-  modalSubtitle: { fontSize: 12, color: '#6B7280' },
-  textArea: { minHeight: 100, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', padding: 10, fontSize: 14, color: '#111827' },
+  helperText: { marginTop: 6, color: '#64748B', fontSize: 12, fontWeight: '700' },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', paddingHorizontal: 20 },
+  modalCard: { backgroundColor: 'white', borderRadius: 16, padding: 16, gap: 10, elevation: 4 },
+  modalTitle: { fontSize: 18, fontWeight: '900', color: '#0F172A' },
+  modalSubtitle: { fontSize: 12, color: '#64748B', fontWeight: '600' },
+  textArea: { minHeight: 100, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', padding: 12, fontSize: 14, color: '#0F172A' },
 });
 

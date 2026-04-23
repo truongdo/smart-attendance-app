@@ -1,6 +1,6 @@
-import { Redirect } from 'expo-router';
+import AttendanceScreen from '../attendance';
 
 export default function AttendanceTab() {
-  return <Redirect href="/attendance" />;
+  return <AttendanceScreen />;
 }
 

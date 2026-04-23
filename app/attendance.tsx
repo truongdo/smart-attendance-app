@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, PermissionsAndroid, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { BleManager } from 'react-native-ble-plx';
 import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, where } from 'firebase/firestore';
 
 import { db } from '@/lib/firebase';
@@ -15,7 +14,20 @@ type NextType = 'in' | 'out';
 
 export default function AttendanceScreen() {
   const { profile } = useAuthStore();
-  const manager = useMemo(() => new BleManager(), []);
+  const managerRef = useRef<any>(null);
+
+  const getBleManager = () => {
+    if (managerRef.current) return managerRef.current;
+    try {
+      // Lazy-load to avoid hard-crashing in environments without the native module (e.g. Expo Go).
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { BleManager } = require('react-native-ble-plx');
+      managerRef.current = new BleManager();
+      return managerRef.current;
+    } catch {
+      return null;
+    }
+  };
 
   const [cameraPerm, requestCameraPerm] = useCameraPermissions();
   const cameraRef = useRef<CameraView | null>(null);
@@ -39,19 +51,91 @@ export default function AttendanceScreen() {
   const [explanation, setExplanation] = useState('');
   const [pendingType, setPendingType] = useState<NextType>('in');
 
+  const ensureAndroidBlePermissions = async () => {
+    if (Platform.OS !== 'android') return;
+
+    // Android 12+ runtime permissions are required for BLE scan/connect.
+    // We request both; if the OS is older, these constants may not exist (and request() will throw), so we guard.
+    const toRequest: string[] = [];
+    const anyPermissionsAndroid: any = PermissionsAndroid as any;
+    const permScan = anyPermissionsAndroid?.PERMISSIONS?.BLUETOOTH_SCAN;
+    const permConnect = anyPermissionsAndroid?.PERMISSIONS?.BLUETOOTH_CONNECT;
+
+    if (permScan) toRequest.push(String(permScan));
+    if (permConnect) toRequest.push(String(permConnect));
+
+    // Older Android versions often require location permission for BLE scanning.
+    toRequest.push(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
+
+    const results = await PermissionsAndroid.requestMultiple(toRequest as any);
+    const denied = Object.entries(results).filter(([, v]) => v !== PermissionsAndroid.RESULTS.GRANTED);
+    if (denied.length > 0) {
+      throw new Error('Vui lòng cấp quyền Bluetooth/Location để kết nối thiết bị.');
+    }
+  };
+
+  const waitForBlePoweredOn = async (manager: any, timeoutMs = 8000) => {
+    // BleManager can be in "Unknown" briefly on startup; wait for a concrete state.
+    return await new Promise<void>(async (resolve, reject) => {
+      let done = false;
+      let sub: any | null = null;
+      const finish = (err?: Error) => {
+        if (done) return;
+        done = true;
+        try {
+          if (sub) sub.remove();
+        } catch {
+          // ignore
+        }
+        err ? reject(err) : resolve();
+      };
+
+      const timer = setTimeout(() => finish(new Error('BluetoothLE đang khởi tạo. Vui lòng bật Bluetooth và thử lại.')), timeoutMs);
+
+      try {
+        const initial = await manager.state();
+        if (initial === 'PoweredOn') {
+          clearTimeout(timer);
+          finish();
+          return;
+        }
+      } catch {
+        // ignore and rely on listener below
+      }
+
+      try {
+        sub = manager.onStateChange((state: string) => {
+          if (state === 'PoweredOn') {
+            clearTimeout(timer);
+            finish();
+          } else if (state === 'Unauthorized') {
+            clearTimeout(timer);
+            finish(new Error('Bluetooth bị từ chối quyền. Vui lòng cấp quyền Bluetooth trong Cài đặt.'));
+          } else if (state === 'Unsupported') {
+            clearTimeout(timer);
+            finish(new Error('Thiết bị không hỗ trợ Bluetooth LE.'));
+          }
+        }, true);
+      } catch {
+        // If onStateChange isn't available for some reason, let the timeout fire.
+      }
+    });
+  };
+
   useEffect(() => {
     return () => {
       try {
-        manager.destroy();
+        if (managerRef.current) managerRef.current.destroy();
       } catch {
         // ignore
       }
     };
-  }, [manager]);
+  }, []);
 
   const resetBt = async () => {
     try {
-      if (deviceId) await manager.cancelDeviceConnection(deviceId);
+      const manager = getBleManager();
+      if (manager && deviceId) await manager.cancelDeviceConnection(deviceId);
     } catch {
       // ignore
     }
@@ -103,6 +187,18 @@ export default function AttendanceScreen() {
     setBtConnecting(true);
     try {
       await resetBt();
+      const manager = getBleManager();
+      if (!manager) {
+        Alert.alert(
+          'Bluetooth',
+          'Bluetooth module chưa sẵn sàng. Nếu bạn đang chạy bằng Expo Go, hãy dùng Dev Build (expo-dev-client) rồi chạy lại.',
+        );
+        return;
+      }
+
+      await ensureAndroidBlePermissions();
+      await waitForBlePoweredOn(manager);
+
       const device = await scanAndConnectFirst({ manager });
       const discovered = await connectAndDiscover(manager, device);
       setBtConnectedName(discovered.name || 'Thiết bị chấm công');
@@ -208,11 +304,25 @@ export default function AttendanceScreen() {
                 <Text style={styles.smallButtonText}>Chụp lại</Text>
               </Pressable>
             </View>
-          ) : (
+          ) : cameraPerm?.granted ? (
             <CameraView ref={cameraRef as any} style={styles.camera} facing="front" />
+          ) : (
+            <View style={styles.cameraBlocked}>
+              <Text style={styles.cameraBlockedTitle}>Cần quyền Camera</Text>
+              <Text style={styles.cameraBlockedSub}>Bấm “Cấp quyền” để bật camera.</Text>
+              <Pressable
+                style={styles.smallButton}
+                onPress={async () => {
+                  await requestCameraPerm();
+                }}
+                disabled={submitting}
+              >
+                <Text style={styles.smallButtonText}>Cấp quyền</Text>
+              </Pressable>
+            </View>
           )}
         </View>
-        {!photoUri ? (
+        {!photoUri && cameraPerm?.granted ? (
           <Pressable style={styles.primaryButton} onPress={capture} disabled={submitting}>
             <Text style={styles.primaryButtonText}>Chụp ảnh</Text>
           </Pressable>
@@ -297,6 +407,9 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 16, fontWeight: '800', color: '#111827' },
   cameraWrap: { height: 260, borderRadius: 14, overflow: 'hidden', backgroundColor: '#111827' },
   camera: { flex: 1 },
+  cameraBlocked: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 16 },
+  cameraBlockedTitle: { color: 'white', fontSize: 16, fontWeight: '900', textAlign: 'center' },
+  cameraBlockedSub: { color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: '700', textAlign: 'center' },
   photoTaken: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
   photoTakenText: { color: 'white', fontSize: 16, fontWeight: '700' },
   row: { flexDirection: 'row', gap: 10, alignItems: 'center' },

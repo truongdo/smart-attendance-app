@@ -22,6 +22,7 @@
           }
         ],
         "NSBluetoothAlwaysUsageDescription": "This app uses Bluetooth to connect to your device",
+        "NSBluetoothPeripheralUsageDescription": "This app uses Bluetooth to connect to your attendance device",
         "NSCameraUsageDescription": "This app uses the camera to capture an attendance selfie"
       }
     },

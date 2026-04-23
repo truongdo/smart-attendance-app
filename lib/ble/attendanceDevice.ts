@@ -1,4 +1,5 @@
-import { BleManager, type Device, type Subscription } from 'react-native-ble-plx';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore - base-64 doesn't ship types in this project
 import { decode as b64decode, encode as b64encode } from 'base-64';
 
 export const FIRMWARE_SERVICE_UUID = '08f7e6d5-c4b3-a291-807f-6e5d4c3b2a7e';
@@ -15,17 +16,17 @@ export function normalizeMacUpperColon(input: string) {
 }
 
 export type ConnectedBleDevice = {
-  manager: BleManager;
-  device: Device;
+  manager: any;
+  device: any;
 };
 
 export async function scanAndConnectFirst({
   manager,
   timeoutMs = 15000,
 }: {
-  manager: BleManager;
+  manager: any;
   timeoutMs?: number;
-}): Promise<Device> {
+}): Promise<any> {
   return await new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       try {
@@ -36,7 +37,7 @@ export async function scanAndConnectFirst({
       reject(new Error('Timed out scanning for device.'));
     }, timeoutMs);
 
-    manager.startDeviceScan([FIRMWARE_SERVICE_UUID], null, async (error, device) => {
+    manager.startDeviceScan([FIRMWARE_SERVICE_UUID], null, async (error: any, device: any) => {
       if (error) {
         clearTimeout(timeout);
         try {
@@ -61,15 +62,15 @@ export async function scanAndConnectFirst({
   });
 }
 
-export async function connectAndDiscover(manager: BleManager, device: Device): Promise<Device> {
+export async function connectAndDiscover(manager: any, device: any): Promise<any> {
   const connected = await manager.connectToDevice(device.id, { timeout: 12000 });
   return await connected.discoverAllServicesAndCharacteristics();
 }
 
-export async function requestDeviceMac(manager: BleManager, device: Device): Promise<string> {
+export async function requestDeviceMac(manager: any, device: any): Promise<string> {
   const reqBytesB64 = b64encode('REQ');
 
-  let sub: Subscription | null = null;
+  let sub: any | null = null;
   try {
     const valuePromise = new Promise<string>((resolve, reject) => {
       const timeout = setTimeout(() => {
@@ -77,7 +78,7 @@ export async function requestDeviceMac(manager: BleManager, device: Device): Pro
         reject(new Error('Timed out waiting for MAC.'));
       }, 2500);
 
-      sub = device.monitorCharacteristicForService(FIRMWARE_SERVICE_UUID, CODE_CHAR_UUID, (error, ch) => {
+      sub = device.monitorCharacteristicForService(FIRMWARE_SERVICE_UUID, CODE_CHAR_UUID, (error: any, ch: any) => {
         if (error) {
           clearTimeout(timeout);
           if (sub) sub.remove();

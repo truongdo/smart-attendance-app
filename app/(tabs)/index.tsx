@@ -1,98 +1,136 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { limit, onSnapshot, orderBy, query, collection, where } from 'firebase/firestore';
+import { useRouter } from 'expo-router';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { db } from '@/lib/firebase';
+import { useAuthStore } from '@/stores/authStore';
+import type { AttendanceRecord } from '@/types';
 
-export default function HomeScreen() {
+export default function DashboardScreen() {
+  const { profile, user } = useAuthStore();
+  const router = useRouter();
+  const [recent, setRecent] = useState<AttendanceRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const statusLabel = useMemo(() => {
+    if (!profile) return '—';
+    if (!profile.isActive) return 'Chờ duyệt';
+    return profile.isAdmin ? 'Admin' : 'Đã kích hoạt';
+  }, [profile]);
+
+  useEffect(() => {
+    if (!profile?.uid) return;
+    const q = query(
+      collection(db, 'attendance'),
+      where('userId', '==', profile.uid),
+      orderBy('timestamp', 'desc'),
+      limit(5),
+    );
+
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        setRecent(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) } as AttendanceRecord)));
+        setLoading(false);
+      },
+      () => setLoading(false),
+    );
+
+    return () => unsub();
+  }, [profile?.uid]);
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.card}>
+        <Text style={styles.hi}>Xin chào</Text>
+        <Text style={styles.name}>{profile?.fullName || user?.displayName || user?.email || 'Người dùng'}</Text>
+        <View style={styles.badges}>
+          <View style={[styles.badge, !profile?.isActive ? styles.badgePending : styles.badgeActive]}>
+            <Text style={[styles.badgeText, !profile?.isActive ? styles.badgeTextPending : styles.badgeTextActive]}>
+              {statusLabel}
+            </Text>
+          </View>
+          {profile?.employeeCode ? (
+            <View style={[styles.badge, styles.badgeNeutral]}>
+              <Text style={[styles.badgeText, styles.badgeTextNeutral]}>{profile.employeeCode}</Text>
+            </View>
+          ) : null}
+        </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        <Pressable style={styles.primaryButton} onPress={() => router.push('/attendance' as any)}>
+          <Text style={styles.primaryButtonText}>Chấm công ngay</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Lịch sử gần đây</Text>
+        {loading ? (
+          <View style={styles.centerPad}>
+            <ActivityIndicator />
+          </View>
+        ) : recent.length === 0 ? (
+          <Text style={styles.empty}>Chưa có dữ liệu chấm công</Text>
+        ) : (
+          <View style={styles.list}>
+            {recent.map((r) => (
+              <View key={r.id} style={styles.row}>
+                <View style={[styles.pill, r.type === 'in' ? styles.pillIn : styles.pillOut]}>
+                  <Text style={styles.pillText}>{r.type === 'in' ? 'VÀO' : 'RA'}</Text>
+                </View>
+                <View style={styles.rowMain}>
+                  <Text style={styles.projectName} numberOfLines={1}>
+                    {r.projectName || r.projectId || '—'}
+                  </Text>
+                  <Text style={styles.sub} numberOfLines={1}>
+                    {r.deviceMac || '—'}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: { flex: 1, backgroundColor: '#F4F4F5' },
+  content: { padding: 16, gap: 12 },
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 16,
+    gap: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
+  hi: { fontSize: 12, color: '#6B7280', fontWeight: '800' },
+  name: { fontSize: 22, color: '#111827', fontWeight: '900', letterSpacing: -0.4 },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  badge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
+  badgeText: { fontSize: 11, fontWeight: '900' },
+  badgeActive: { backgroundColor: '#DCFCE7' },
+  badgeTextActive: { color: '#166534' },
+  badgePending: { backgroundColor: '#E5E7EB' },
+  badgeTextPending: { color: '#374151' },
+  badgeNeutral: { backgroundColor: '#EFF6FF' },
+  badgeTextNeutral: { color: '#1D4ED8' },
+  primaryButton: { marginTop: 6, height: 48, borderRadius: 12, backgroundColor: '#111827', alignItems: 'center', justifyContent: 'center' },
+  primaryButtonText: { color: 'white', fontSize: 16, fontWeight: '900' },
+  sectionTitle: { fontSize: 16, fontWeight: '900', color: '#111827' },
+  centerPad: { paddingVertical: 14, alignItems: 'center' },
+  empty: { color: '#6B7280', fontSize: 12, fontWeight: '700' },
+  list: { gap: 10 },
+  row: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  pill: { width: 44, height: 34, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  pillIn: { backgroundColor: '#16A34A' },
+  pillOut: { backgroundColor: '#F97316' },
+  pillText: { color: 'white', fontSize: 11, fontWeight: '900' },
+  rowMain: { flex: 1, gap: 2 },
+  projectName: { color: '#111827', fontSize: 13, fontWeight: '900' },
+  sub: { color: '#6B7280', fontSize: 11, fontWeight: '700', fontFamily: 'Courier' },
 });

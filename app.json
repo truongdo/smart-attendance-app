@@ -13,10 +13,25 @@
       "bundleIdentifier": "com.anonymous.SmartAttendance",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSBluetoothAlwaysUsageDescription": "This app uses Bluetooth to connect to your device"
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "smartattendance",
+              "com.googleusercontent.apps.975034534662-h58c4f205fica49goqd69gaoekubtvhf"
+            ]
+          }
+        ],
+        "NSBluetoothAlwaysUsageDescription": "This app uses Bluetooth to connect to your device",
+        "NSCameraUsageDescription": "This app uses the camera to capture an attendance selfie"
       }
     },
     "android": {
+      "permissions": [
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -32,6 +47,14 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "modes": ["central"],
+          "bluetoothAlwaysPermission": "Allow $(PRODUCT_NAME) to connect to Bluetooth devices"
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -51,6 +74,12 @@
     },
     "extra": {
       "router": {},
+      "googleAuth": {
+        "expoClientId": "975034534662-rg079boi920u4u1gt5k3qc4k0q2nftj0.apps.googleusercontent.com",
+        "iosClientId": "975034534662-h58c4f205fica49goqd69gaoekubtvhf.apps.googleusercontent.com",
+        "androidClientId": "",
+        "webClientId": "975034534662-rg079boi920u4u1gt5k3qc4k0q2nftj0.apps.googleusercontent.com"
+      },
       "eas": {
         "projectId": "a8daed29-bd8b-44a3-9cc3-e00708ebca01"
       }

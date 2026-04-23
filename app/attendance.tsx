@@ -10,25 +10,31 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, where } from 'firebase/firestore';
 
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Input } from '@/components/ui/input';
+import { Colors, Radii, Typography } from '@/constants/theme';
 import { db } from '@/lib/firebase';
 import { useAuthStore } from '@/stores/authStore';
 import type { Project } from '@/types';
 import { formatDateYmd, needsExplanation } from '@/lib/attendance';
 import { uploadImageFromUri } from '@/lib/storage/upload';
 import { connectAndDiscover, requestDeviceMac, scanAndConnectFirst } from '@/lib/ble/attendanceDevice';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 type NextType = 'in' | 'out';
 
 export default function AttendanceScreen() {
   const insets = useSafeAreaInsets();
   const { profile } = useAuthStore();
+  const scheme = useColorScheme();
+  const c = Colors[scheme];
   const managerRef = useRef<any>(null);
 
   const getBleManager = () => {
@@ -316,34 +322,32 @@ export default function AttendanceScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <View style={styles.container}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: c.bg }]} edges={['top', 'left', 'right']}>
+      <View style={[styles.container, { backgroundColor: c.bg }]}>
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + insets.bottom }]}
           showsVerticalScrollIndicator={false}
         >
         <View style={styles.header}>
-          <Text style={styles.title}>Chấm công</Text>
-          <Text style={styles.subtitle} numberOfLines={2}>
+          <Text style={[styles.title, { color: c.text }]}>Chấm công</Text>
+          <Text style={[styles.subtitle, { color: c.textMuted }]} numberOfLines={2}>
             {project?.name ? `Dự án: ${project.name}` : 'Kết nối thiết bị để xác định dự án'}
           </Text>
         </View>
 
-        <View style={styles.card}>
+        <Card style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Ảnh xác thực</Text>
-            <Text style={styles.cardHint}>Chụp ảnh khuôn mặt trước khi chấm.</Text>
+            <Text style={[styles.cardTitle, { color: c.text }]}>Ảnh xác thực</Text>
+            <Text style={[styles.cardHint, { color: c.textMuted }]}>Chụp ảnh khuôn mặt trước khi chấm.</Text>
           </View>
 
-          <View style={styles.cameraWrap}>
+          <View style={[styles.cameraWrap, { backgroundColor: c.text }]}>
             {photoUri ? (
               <View style={styles.photoPreview}>
                 <Image source={{ uri: photoUri }} style={styles.photo} />
                 <View style={styles.photoOverlay}>
                   <Text style={styles.photoOverlayText}>Ảnh đã chụp</Text>
-                  <Pressable style={styles.ghostButton} onPress={() => setPhotoUri(null)} disabled={submitting}>
-                    <Text style={styles.ghostButtonText}>Chụp lại</Text>
-                  </Pressable>
+                  <Button title="Chụp lại" variant="ghost" onPress={() => setPhotoUri(null)} disabled={submitting} style={styles.ghostButton} textStyle={styles.ghostButtonText as any} />
                 </View>
               </View>
             ) : cameraPerm?.granted ? (
@@ -351,7 +355,7 @@ export default function AttendanceScreen() {
                 <CameraView ref={cameraRef as any} style={styles.camera} facing="front" />
                 <View style={styles.cameraControls}>
                   <Pressable style={styles.captureButton} onPress={capture} disabled={submitting}>
-                    {submitting ? <ActivityIndicator color="#111827" /> : <Text style={styles.captureButtonText}>Chụp ảnh</Text>}
+                    {submitting ? <ActivityIndicator color={c.text} /> : <Text style={[styles.captureButtonText, { color: c.text }]}>Chụp ảnh</Text>}
                   </Pressable>
                 </View>
               </>
@@ -359,103 +363,87 @@ export default function AttendanceScreen() {
               <View style={styles.cameraBlocked}>
                 <Text style={styles.cameraBlockedTitle}>Cần quyền Camera</Text>
                 <Text style={styles.cameraBlockedSub}>Bấm “Cấp quyền” để bật camera và chụp ảnh.</Text>
-                <Pressable
-                  style={styles.captureButton}
-                  onPress={async () => {
-                    await requestCameraPerm();
-                  }}
-                  disabled={submitting}
-                >
-                  <Text style={styles.captureButtonText}>Cấp quyền</Text>
+                <Pressable style={styles.captureButton} onPress={async () => await requestCameraPerm()} disabled={submitting}>
+                  <Text style={[styles.captureButtonText, { color: c.text }]}>Cấp quyền</Text>
                 </Pressable>
               </View>
             )}
           </View>
-        </View>
+        </Card>
 
-        <View style={styles.card}>
+        <Card style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Thiết bị chấm công</Text>
-            <Text style={styles.cardHint}>Kết nối Bluetooth để lấy dự án và MAC thiết bị.</Text>
+            <Text style={[styles.cardTitle, { color: c.text }]}>Thiết bị chấm công</Text>
+            <Text style={[styles.cardHint, { color: c.textMuted }]}>Kết nối Bluetooth để lấy dự án và MAC thiết bị.</Text>
           </View>
 
           <View style={styles.kv}>
-            <Text style={styles.k}>Trạng thái</Text>
-            <Text style={styles.v}>{btConnectedName ? `Đã kết nối: ${btConnectedName}` : 'Chưa kết nối'}</Text>
+            <Text style={[styles.k, { color: c.textMuted }]}>Trạng thái</Text>
+            <Text style={[styles.v, { color: c.text }]}>{btConnectedName ? `Đã kết nối: ${btConnectedName}` : 'Chưa kết nối'}</Text>
           </View>
           <View style={styles.kv}>
-            <Text style={styles.k}>MAC</Text>
-            <Text style={styles.vMono}>{deviceMac || '—'}</Text>
+            <Text style={[styles.k, { color: c.textMuted }]}>MAC</Text>
+            <Text style={[styles.vMono, { color: c.text }]}>{deviceMac || '—'}</Text>
           </View>
           <View style={styles.kv}>
-            <Text style={styles.k}>Dự án</Text>
-            <Text style={styles.v}>{projectLoading ? 'Đang tải...' : project?.name || projectId || '—'}</Text>
+            <Text style={[styles.k, { color: c.textMuted }]}>Dự án</Text>
+            <Text style={[styles.v, { color: c.text }]}>{projectLoading ? 'Đang tải...' : project?.name || projectId || '—'}</Text>
           </View>
 
           <View style={styles.row}>
-            <Pressable style={styles.primaryButton} onPress={connectBtAndLoadProject} disabled={btConnecting || submitting}>
-              <Text style={styles.primaryButtonText}>{btConnecting ? 'Đang kết nối...' : 'Kết nối Bluetooth'}</Text>
-            </Pressable>
-            <Pressable style={styles.secondaryButton} onPress={resetBt} disabled={btConnecting || submitting}>
-              <Text style={styles.secondaryButtonText}>Ngắt</Text>
-            </Pressable>
+            <Button
+              title={btConnecting ? 'Đang kết nối...' : 'Kết nối Bluetooth'}
+              onPress={connectBtAndLoadProject}
+              loading={btConnecting}
+              disabled={submitting}
+              style={styles.flex1 as any}
+            />
+            <Button title="Ngắt" variant="secondary" onPress={resetBt} disabled={btConnecting || submitting} />
           </View>
-        </View>
+        </Card>
 
-        <View style={styles.card}>
+        <Card style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Chấm công</Text>
-            <Text style={styles.cardHint}>Kiểm tra ảnh + thiết bị trước khi bấm.</Text>
+            <Text style={[styles.cardTitle, { color: c.text }]}>Chấm công</Text>
+            <Text style={[styles.cardHint, { color: c.textMuted }]}>Kiểm tra ảnh + thiết bị trước khi bấm.</Text>
           </View>
 
           <View style={styles.kv}>
-            <Text style={styles.k}>Hôm nay</Text>
-            <Text style={styles.v}>{todayCountsLoading ? 'Đang tải...' : `Vào: ${todayInCount} • Ra: ${todayOutCount}`}</Text>
+            <Text style={[styles.k, { color: c.textMuted }]}>Hôm nay</Text>
+            <Text style={[styles.v, { color: c.text }]}>{todayCountsLoading ? 'Đang tải...' : `Vào: ${todayInCount} • Ra: ${todayOutCount}`}</Text>
           </View>
 
-          <Pressable
-            style={[styles.primaryButton, !(photoUri && projectId) ? styles.buttonDisabled : null]}
+          <Button
+            title={nextActionType === 'in' ? 'Chấm vào' : 'Chấm ra'}
             onPress={() => startSubmit(nextActionType)}
-            disabled={submitting || todayCountsLoading || !(photoUri && projectId)}
-          >
-            {submitting ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text style={styles.primaryButtonText}>{nextActionType === 'in' ? 'Chấm vào' : 'Chấm ra'}</Text>
-            )}
-          </Pressable>
+            loading={submitting}
+            disabled={todayCountsLoading || !(photoUri && projectId)}
+          />
           {!photoUri || !projectId ? (
-            <Text style={styles.helperText}>
+            <Text style={[styles.helperText, { color: c.textMuted }]}>
               {!photoUri ? '• Cần chụp ảnh xác thực.' : ''} {!projectId ? '• Cần kết nối Bluetooth để xác định dự án.' : ''}
             </Text>
           ) : null}
-        </View>
+        </Card>
         </ScrollView>
 
       <Modal transparent visible={explainOpen} animationType="fade" onRequestClose={() => setExplainOpen(false)}>
         <View style={[styles.modalBackdrop, { paddingBottom: Math.max(20, insets.bottom + 12), paddingTop: Math.max(20, insets.top + 12) }]}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Yêu cầu giải trình</Text>
-            <Text style={styles.modalSubtitle}>Vui lòng nhập lý do.</Text>
-            <TextInput
+          <View style={[styles.modalCard, { backgroundColor: c.surface, borderColor: c.border }]}>
+            <Text style={[styles.modalTitle, { color: c.text }]}>Yêu cầu giải trình</Text>
+            <Text style={[styles.modalSubtitle, { color: c.textMuted }]}>Vui lòng nhập lý do.</Text>
+            <Input
               style={styles.textArea}
               multiline
               placeholder="Nhập lý do..."
               value={explanation}
               onChangeText={setExplanation}
               editable={!submitting}
+              variant="multiline"
             />
             <View style={styles.row}>
-              <Pressable style={styles.secondaryButton} onPress={() => setExplainOpen(false)} disabled={submitting}>
-                <Text style={styles.secondaryButtonText}>Hủy</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.primaryButton, !explanation.trim() ? styles.buttonDisabled : null]}
-                disabled={submitting || !explanation.trim()}
-                onPress={() => finalizeSubmit(pendingType, explanation)}
-              >
-                {submitting ? <ActivityIndicator color="white" /> : <Text style={styles.primaryButtonText}>Gửi</Text>}
-              </Pressable>
+              <Button title="Hủy" variant="secondary" onPress={() => setExplainOpen(false)} disabled={submitting} />
+              <Button title="Gửi" onPress={() => finalizeSubmit(pendingType, explanation)} disabled={!explanation.trim()} loading={submitting} style={styles.flex1 as any} />
             </View>
           </View>
         </View>
@@ -466,59 +454,43 @@ export default function AttendanceScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F6F7FB' },
-  container: { flex: 1, backgroundColor: '#F6F7FB' },
+  safeArea: { flex: 1 },
+  container: { flex: 1 },
   scrollContent: { paddingHorizontal: 16, paddingTop: 12, gap: 12 },
   header: { gap: 6, paddingHorizontal: 2, paddingBottom: 4 },
-  title: { fontSize: 24, fontWeight: '900', color: '#0F172A', letterSpacing: -0.3 },
-  subtitle: { fontSize: 13, fontWeight: '700', color: '#64748B' },
+  title: { ...Typography.title, fontSize: 24, letterSpacing: -0.3 },
+  subtitle: { fontSize: 13, fontWeight: '700' },
 
   card: {
-    backgroundColor: 'white',
-    borderRadius: 16,
     padding: 14,
     gap: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 2,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(15, 23, 42, 0.06)',
   },
   cardHeader: { gap: 2 },
-  cardTitle: { fontSize: 16, fontWeight: '900', color: '#0F172A' },
-  cardHint: { fontSize: 12, fontWeight: '700', color: '#64748B' },
+  cardTitle: { ...Typography.h2 },
+  cardHint: { ...Typography.caption },
 
-  cameraWrap: { height: 320, borderRadius: 16, overflow: 'hidden', backgroundColor: '#0F172A' },
+  cameraWrap: { height: 320, borderRadius: Radii.lg, overflow: 'hidden' },
   camera: { flex: 1 },
   cameraBlocked: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 16 },
   cameraBlockedTitle: { color: 'white', fontSize: 16, fontWeight: '900', textAlign: 'center' },
   cameraBlockedSub: { color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: '700', textAlign: 'center' },
 
   cameraControls: { position: 'absolute', left: 12, right: 12, bottom: 12 },
-  captureButton: {
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  captureButtonText: { color: '#0F172A', fontSize: 16, fontWeight: '900' },
+  captureButton: { height: 48, borderRadius: Radii.md, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
+  captureButtonText: { fontSize: 16, fontWeight: '900' },
 
   photoPreview: { flex: 1 },
   photo: { width: '100%', height: '100%' },
   photoOverlay: { position: 'absolute', left: 12, right: 12, bottom: 12, gap: 8 },
   photoOverlayText: { color: 'white', fontSize: 14, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.6)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
-  ghostButton: { height: 44, borderRadius: 14, backgroundColor: 'rgba(15,23,42,0.72)', alignItems: 'center', justifyContent: 'center' },
+  ghostButton: { height: 44, borderRadius: Radii.md, backgroundColor: 'rgba(2, 6, 23, 0.65)', borderWidth: 0 },
   ghostButtonText: { color: 'white', fontSize: 14, fontWeight: '900' },
 
   row: { flexDirection: 'row', gap: 10, alignItems: 'center' },
   kv: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, alignItems: 'center' },
-  k: { color: '#64748B', fontSize: 12, fontWeight: '800' },
-  v: { color: '#0F172A', fontSize: 12, fontWeight: '800', flexShrink: 1, textAlign: 'right' },
+  k: { ...Typography.label },
+  v: { fontSize: 12, fontWeight: '800', flexShrink: 1, textAlign: 'right' },
   vMono: {
-    color: '#0F172A',
     fontSize: 12,
     fontWeight: '800',
     fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
@@ -526,16 +498,12 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
 
-  primaryButton: { flex: 1, height: 48, borderRadius: 12, backgroundColor: '#0F172A', alignItems: 'center', justifyContent: 'center' },
-  primaryButtonText: { color: 'white', fontSize: 16, fontWeight: '800' },
-  secondaryButton: { height: 48, paddingHorizontal: 16, borderRadius: 12, backgroundColor: '#EEF2F7', alignItems: 'center', justifyContent: 'center' },
-  secondaryButtonText: { color: '#0F172A', fontSize: 14, fontWeight: '800' },
-  buttonDisabled: { opacity: 0.5 },
-  helperText: { marginTop: 6, color: '#64748B', fontSize: 12, fontWeight: '700' },
+  flex1: { flex: 1 },
+  helperText: { marginTop: 6, ...Typography.caption },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', paddingHorizontal: 20 },
-  modalCard: { backgroundColor: 'white', borderRadius: 16, padding: 16, gap: 10, elevation: 4 },
-  modalTitle: { fontSize: 18, fontWeight: '900', color: '#0F172A' },
-  modalSubtitle: { fontSize: 12, color: '#64748B', fontWeight: '600' },
-  textArea: { minHeight: 100, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', padding: 12, fontSize: 14, color: '#0F172A' },
+  modalCard: { borderRadius: Radii.lg, padding: 16, gap: 10, elevation: 4, borderWidth: StyleSheet.hairlineWidth },
+  modalTitle: { ...Typography.h2 },
+  modalSubtitle: { ...Typography.caption, fontWeight: '700' },
+  textArea: {},
 });
 

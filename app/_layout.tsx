@@ -1,9 +1,9 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { ThemeProvider } from '@react-navigation/native';
+import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { NavigationThemeLight } from '@/constants/navigationTheme';
 import { useAuthInit } from '@/hooks/useAuthInit';
 import { useAuthStore } from '@/stores/authStore';
 import { useEffect } from 'react';
@@ -13,24 +13,25 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   useAuthInit();
   const { user, loading } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
+  const rootNavState = useRootNavigationState();
 
   useEffect(() => {
     if (loading) return;
+    if (!rootNavState?.key) return;
     const inAuth = (segments[0] as string) === 'login';
     if (!user && !inAuth) {
       router.replace('/login' as any);
     } else if (user && inAuth) {
       router.replace('/' as any);
     }
-  }, [loading, router, segments, user]);
+  }, [loading, rootNavState?.key, router, segments, user]);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={NavigationThemeLight}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="attendance" options={{ headerShown: true, title: 'Chấm công' }} />

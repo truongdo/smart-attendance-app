@@ -1,19 +1,25 @@
+import { useRouter } from 'expo-router';
+import { signOut } from 'firebase/auth';
+import { collection, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { limit, onSnapshot, orderBy, query, collection, where } from 'firebase/firestore';
-import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { signOut } from 'firebase/auth';
 
-import { db } from '@/lib/firebase';
-import { auth } from '@/lib/firebase';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Colors, Radii, Typography } from '@/constants/theme';
+import { auth, db } from '@/lib/firebase';
 import { useAuthStore } from '@/stores/authStore';
 import type { AttendanceRecord } from '@/types';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const { profile, user } = useAuthStore();
   const router = useRouter();
+  const scheme = useColorScheme();
+  const c = Colors[scheme];
   const [recent, setRecent] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
@@ -65,62 +71,64 @@ export default function DashboardScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: c.bg }]} edges={['top', 'left', 'right']}>
       <ScrollView
-        style={styles.container}
+        style={[styles.container, { backgroundColor: c.bg }]}
         contentContainerStyle={[styles.content, { paddingBottom: 24 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.card}>
+        <Card>
           <View style={styles.headerRow}>
-            <Text style={styles.hi}>Xin chào</Text>
+            <Text style={[styles.hi, { color: c.textMuted }]}>Xin chào</Text>
             <Pressable style={styles.logoutButton} onPress={confirmLogout} disabled={signingOut}>
-              <Text style={[styles.logoutText, signingOut ? styles.logoutTextDisabled : null]}>
+              <Text style={[styles.logoutText, { color: c.text }, signingOut ? styles.logoutTextDisabled : null]}>
                 {signingOut ? 'Đang thoát...' : 'Đăng xuất'}
               </Text>
             </Pressable>
           </View>
-          <Text style={styles.name} numberOfLines={2}>
+          <Text style={[styles.name, { color: c.text }]} numberOfLines={2}>
             {profile?.fullName || user?.displayName || user?.email || 'Người dùng'}
           </Text>
           <View style={styles.badges}>
-            <View style={[styles.badge, !profile?.isActive ? styles.badgePending : styles.badgeActive]}>
-              <Text style={[styles.badgeText, !profile?.isActive ? styles.badgeTextPending : styles.badgeTextActive]}>
-                {statusLabel}
-              </Text>
-            </View>
+            <Badge tone={!profile?.isActive ? 'neutral' : 'success'} label={statusLabel} />
             {profile?.employeeCode ? (
-              <View style={[styles.badge, styles.badgeNeutral]}>
-                <Text style={[styles.badgeText, styles.badgeTextNeutral]}>{profile.employeeCode}</Text>
-              </View>
+              <Badge tone="info" label={profile.employeeCode} />
             ) : null}
           </View>
 
-          <Pressable style={styles.primaryButton} onPress={() => router.push('/attendance' as any)}>
-            <Text style={styles.primaryButtonText}>Chấm công ngay</Text>
-          </Pressable>
-        </View>
+          <Button title="Chấm công ngay" onPress={() => router.push('/attendance' as any)} />
+        </Card>
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Lịch sử gần đây</Text>
+        <Card>
+          <Text style={[styles.sectionTitle, { color: c.text }]}>Lịch sử gần đây</Text>
           {loading ? (
             <View style={styles.centerPad}>
               <ActivityIndicator />
             </View>
           ) : recent.length === 0 ? (
-            <Text style={styles.empty}>Chưa có dữ liệu chấm công</Text>
+            <Text style={[styles.empty, { color: c.textMuted }]}>Chưa có dữ liệu chấm công</Text>
           ) : (
             <View style={styles.list}>
               {recent.map((r) => (
                 <View key={r.id} style={styles.row}>
-                  <View style={[styles.pill, r.type === 'in' ? styles.pillIn : styles.pillOut]}>
-                    <Text style={styles.pillText}>{r.type === 'in' ? 'VÀO' : 'RA'}</Text>
+                  <View
+                    style={[
+                      styles.pill,
+                      {
+                        backgroundColor: r.type === 'in' ? 'rgba(22, 163, 74, 0.14)' : 'rgba(249, 115, 22, 0.14)',
+                        borderColor: c.border,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.pillText, { color: r.type === 'in' ? c.success : c.warning }]}>
+                      {r.type === 'in' ? 'VÀO' : 'RA'}
+                    </Text>
                   </View>
                   <View style={styles.rowMain}>
-                    <Text style={styles.projectName} numberOfLines={1}>
+                    <Text style={[styles.projectName, { color: c.text }]} numberOfLines={1}>
                       {r.projectName || r.projectId || '—'}
                     </Text>
-                    <Text style={styles.sub} numberOfLines={1}>
+                    <Text style={[styles.sub, { color: c.textMuted }]} numberOfLines={1}>
                       {r.deviceMac || '—'}
                     </Text>
                   </View>
@@ -128,61 +136,43 @@ export default function DashboardScreen() {
               ))}
             </View>
           )}
-        </View>
+        </Card>
       </ScrollView>
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F6F7FB' },
-  container: { flex: 1, backgroundColor: '#F6F7FB' },
+  safeArea: { flex: 1 },
+  container: { flex: 1 },
   content: { paddingHorizontal: 16, paddingTop: 12, gap: 12 },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 16,
-    gap: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 2,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(15, 23, 42, 0.06)',
-  },
+  // Cards handled by <Card />
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  hi: { fontSize: 12, color: '#64748B', fontWeight: '800' },
+  hi: { ...Typography.label },
   logoutButton: { paddingVertical: 6, paddingHorizontal: 8, marginRight: -8 },
-  logoutText: { fontSize: 12, fontWeight: '900', color: '#0F172A' },
+  logoutText: { ...Typography.label, fontWeight: '900' },
   logoutTextDisabled: { opacity: 0.6 },
-  name: { fontSize: 24, color: '#0F172A', fontWeight: '900', letterSpacing: -0.4 },
+  name: { ...Typography.title, fontSize: 24 },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  badge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
-  badgeText: { fontSize: 11, fontWeight: '900' },
-  badgeActive: { backgroundColor: '#DCFCE7' },
-  badgeTextActive: { color: '#166534' },
-  badgePending: { backgroundColor: '#E5E7EB' },
-  badgeTextPending: { color: '#374151' },
-  badgeNeutral: { backgroundColor: '#EFF6FF' },
-  badgeTextNeutral: { color: '#1D4ED8' },
-  primaryButton: { marginTop: 6, height: 48, borderRadius: 12, backgroundColor: '#0F172A', alignItems: 'center', justifyContent: 'center' },
-  primaryButtonText: { color: 'white', fontSize: 16, fontWeight: '900' },
-  sectionTitle: { fontSize: 16, fontWeight: '900', color: '#0F172A' },
+  sectionTitle: { ...Typography.h2 },
   centerPad: { paddingVertical: 14, alignItems: 'center' },
-  empty: { color: '#64748B', fontSize: 12, fontWeight: '700' },
+  empty: { ...Typography.caption },
   list: { gap: 10 },
   row: { flexDirection: 'row', gap: 10, alignItems: 'center' },
-  pill: { width: 44, height: 34, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  pillIn: { backgroundColor: '#16A34A' },
-  pillOut: { backgroundColor: '#F97316' },
-  pillText: { color: 'white', fontSize: 11, fontWeight: '900' },
+  pill: {
+    width: 52,
+    height: 34,
+    borderRadius: Radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  pillText: { fontSize: 11, fontWeight: '900' },
   rowMain: { flex: 1, gap: 2 },
-  projectName: { color: '#0F172A', fontSize: 13, fontWeight: '900' },
+  projectName: { fontSize: 13, fontWeight: '900' },
   sub: {
-    color: '#64748B',
     fontSize: 11,
     fontWeight: '700',
     fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
   },
 });
+

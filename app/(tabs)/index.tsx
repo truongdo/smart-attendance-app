@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { limit, onSnapshot, orderBy, query, collection, where } from 'firebase/firestore';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { signOut } from 'firebase/auth';
 
 import { db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { useAuthStore } from '@/stores/authStore';
 import type { AttendanceRecord } from '@/types';
 
@@ -14,6 +16,7 @@ export default function DashboardScreen() {
   const router = useRouter();
   const [recent, setRecent] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [signingOut, setSigningOut] = useState(false);
 
   const statusLabel = useMemo(() => {
     if (!profile) return '—';
@@ -42,6 +45,25 @@ export default function DashboardScreen() {
     return () => unsub();
   }, [profile?.uid]);
 
+  const doLogout = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await signOut(auth);
+      // RootLayout will redirect to /login via auth state listener.
+    } finally {
+      setSigningOut(false);
+    }
+  };
+
+  const confirmLogout = () => {
+    if (signingOut) return;
+    Alert.alert('Đăng xuất', 'Bạn có chắc muốn đăng xuất khỏi ứng dụng?', [
+      { text: 'Hủy', style: 'cancel' },
+      { text: 'Đăng xuất', style: 'destructive', onPress: () => void doLogout() },
+    ]);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <ScrollView
@@ -50,7 +72,14 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.card}>
-          <Text style={styles.hi}>Xin chào</Text>
+          <View style={styles.headerRow}>
+            <Text style={styles.hi}>Xin chào</Text>
+            <Pressable style={styles.logoutButton} onPress={confirmLogout} disabled={signingOut}>
+              <Text style={[styles.logoutText, signingOut ? styles.logoutTextDisabled : null]}>
+                {signingOut ? 'Đang thoát...' : 'Đăng xuất'}
+              </Text>
+            </Pressable>
+          </View>
           <Text style={styles.name} numberOfLines={2}>
             {profile?.fullName || user?.displayName || user?.email || 'Người dùng'}
           </Text>
@@ -122,7 +151,11 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(15, 23, 42, 0.06)',
   },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   hi: { fontSize: 12, color: '#64748B', fontWeight: '800' },
+  logoutButton: { paddingVertical: 6, paddingHorizontal: 8, marginRight: -8 },
+  logoutText: { fontSize: 12, fontWeight: '900', color: '#0F172A' },
+  logoutTextDisabled: { opacity: 0.6 },
   name: { fontSize: 24, color: '#0F172A', fontWeight: '900', letterSpacing: -0.4 },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   badge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },

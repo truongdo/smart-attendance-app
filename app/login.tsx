@@ -4,8 +4,7 @@ import Constants from 'expo-constants';
 import * as WebBrowser from 'expo-web-browser';
 import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { useEffect, useMemo, useState } from 'react';
-import { Platform } from 'react-native';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { auth } from '@/lib/firebase';
@@ -95,10 +94,10 @@ export default function LoginScreen() {
             <Text style={styles.buttonText}>{signingIn ? 'Đang đăng nhập...' : 'Đăng nhập với Google'}</Text>
           </Pressable>
 
-          <Text style={styles.hint}>
+          {/* <Text style={styles.hint}>
             Cần cấu hình OAuth Client IDs trong <Text style={styles.mono}>app.json</Text> →{' '}
             <Text style={styles.mono}>expo.extra.googleAuth</Text>.
-          </Text>
+          </Text> */}
         </View>
       </View>
     </SafeAreaView>

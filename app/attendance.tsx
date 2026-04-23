@@ -1,5 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, PermissionsAndroid, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  PermissionsAndroid,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, where } from 'firebase/firestore';
 
@@ -241,6 +254,14 @@ export default function AttendanceScreen() {
     setPhotoUri(photo.uri);
   };
 
+  useEffect(() => {
+    // Proactively ask permission so the user sees live camera + capture button immediately.
+    if (cameraPerm && !cameraPerm.granted && cameraPerm.canAskAgain) {
+      requestCameraPerm();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cameraPerm?.granted]);
+
   const startSubmit = async (type: NextType) => {
     const now = new Date();
     if (needsExplanation(type, now)) {
@@ -294,80 +315,114 @@ export default function AttendanceScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>1) Ảnh xác thực</Text>
-        <View style={styles.cameraWrap}>
-          {photoUri ? (
-            <View style={styles.photoTaken}>
-              <Text style={styles.photoTakenText}>Đã chụp ảnh</Text>
-              <Pressable style={styles.smallButton} onPress={() => setPhotoUri(null)} disabled={submitting}>
-                <Text style={styles.smallButtonText}>Chụp lại</Text>
-              </Pressable>
-            </View>
-          ) : cameraPerm?.granted ? (
-            <CameraView ref={cameraRef as any} style={styles.camera} facing="front" />
-          ) : (
-            <View style={styles.cameraBlocked}>
-              <Text style={styles.cameraBlockedTitle}>Cần quyền Camera</Text>
-              <Text style={styles.cameraBlockedSub}>Bấm “Cấp quyền” để bật camera.</Text>
-              <Pressable
-                style={styles.smallButton}
-                onPress={async () => {
-                  await requestCameraPerm();
-                }}
-                disabled={submitting}
-              >
-                <Text style={styles.smallButtonText}>Cấp quyền</Text>
-              </Pressable>
-            </View>
-          )}
-        </View>
-        {!photoUri && cameraPerm?.granted ? (
-          <Pressable style={styles.primaryButton} onPress={capture} disabled={submitting}>
-            <Text style={styles.primaryButtonText}>Chụp ảnh</Text>
-          </Pressable>
-        ) : null}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>2) Thiết bị chấm công</Text>
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Trạng thái</Text>
-          <Text style={styles.value}>{btConnectedName ? `Đã kết nối: ${btConnectedName}` : 'Chưa kết nối'}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>MAC</Text>
-          <Text style={styles.valueMono}>{deviceMac || '—'}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Dự án</Text>
-          <Text style={styles.value}>{projectLoading ? 'Đang tải...' : project?.name || '—'}</Text>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Chấm công</Text>
+          <Text style={styles.subtitle}>{project?.name ? `Dự án: ${project.name}` : 'Kết nối thiết bị để xác định dự án'}</Text>
         </View>
 
-        <View style={styles.row}>
-          <Pressable style={styles.primaryButton} onPress={connectBtAndLoadProject} disabled={btConnecting || submitting}>
-            <Text style={styles.primaryButtonText}>{btConnecting ? 'Đang kết nối...' : 'Kết nối Bluetooth'}</Text>
-          </Pressable>
-          <Pressable style={styles.secondaryButton} onPress={resetBt} disabled={btConnecting || submitting}>
-            <Text style={styles.secondaryButtonText}>Ngắt</Text>
-          </Pressable>
-        </View>
-      </View>
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Ảnh xác thực</Text>
+            <Text style={styles.cardHint}>Chụp ảnh khuôn mặt trước khi chấm.</Text>
+          </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>3) Chấm công</Text>
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Hôm nay</Text>
-          <Text style={styles.value}>{todayCountsLoading ? 'Đang tải...' : `Vào: ${todayInCount} • Ra: ${todayOutCount}`}</Text>
+          <View style={styles.cameraWrap}>
+            {photoUri ? (
+              <View style={styles.photoPreview}>
+                <Image source={{ uri: photoUri }} style={styles.photo} />
+                <View style={styles.photoOverlay}>
+                  <Text style={styles.photoOverlayText}>Ảnh đã chụp</Text>
+                  <Pressable style={styles.ghostButton} onPress={() => setPhotoUri(null)} disabled={submitting}>
+                    <Text style={styles.ghostButtonText}>Chụp lại</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : cameraPerm?.granted ? (
+              <>
+                <CameraView ref={cameraRef as any} style={styles.camera} facing="front" />
+                <View style={styles.cameraControls}>
+                  <Pressable style={styles.captureButton} onPress={capture} disabled={submitting}>
+                    {submitting ? <ActivityIndicator color="#111827" /> : <Text style={styles.captureButtonText}>Chụp ảnh</Text>}
+                  </Pressable>
+                </View>
+              </>
+            ) : (
+              <View style={styles.cameraBlocked}>
+                <Text style={styles.cameraBlockedTitle}>Cần quyền Camera</Text>
+                <Text style={styles.cameraBlockedSub}>Bấm “Cấp quyền” để bật camera và chụp ảnh.</Text>
+                <Pressable
+                  style={styles.captureButton}
+                  onPress={async () => {
+                    await requestCameraPerm();
+                  }}
+                  disabled={submitting}
+                >
+                  <Text style={styles.captureButtonText}>Cấp quyền</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
         </View>
-        <Pressable
-          style={[styles.primaryButton, !(photoUri && projectId) ? styles.buttonDisabled : null]}
-          onPress={() => startSubmit(nextActionType)}
-          disabled={submitting || todayCountsLoading || !(photoUri && projectId)}
-        >
-          {submitting ? <ActivityIndicator color="white" /> : <Text style={styles.primaryButtonText}>{nextActionType === 'in' ? 'Chấm vào' : 'Chấm ra'}</Text>}
-        </Pressable>
-      </View>
+
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Thiết bị chấm công</Text>
+            <Text style={styles.cardHint}>Kết nối Bluetooth để lấy dự án và MAC thiết bị.</Text>
+          </View>
+
+          <View style={styles.kv}>
+            <Text style={styles.k}>Trạng thái</Text>
+            <Text style={styles.v}>{btConnectedName ? `Đã kết nối: ${btConnectedName}` : 'Chưa kết nối'}</Text>
+          </View>
+          <View style={styles.kv}>
+            <Text style={styles.k}>MAC</Text>
+            <Text style={styles.vMono}>{deviceMac || '—'}</Text>
+          </View>
+          <View style={styles.kv}>
+            <Text style={styles.k}>Dự án</Text>
+            <Text style={styles.v}>{projectLoading ? 'Đang tải...' : project?.name || projectId || '—'}</Text>
+          </View>
+
+          <View style={styles.row}>
+            <Pressable style={styles.primaryButton} onPress={connectBtAndLoadProject} disabled={btConnecting || submitting}>
+              <Text style={styles.primaryButtonText}>{btConnecting ? 'Đang kết nối...' : 'Kết nối Bluetooth'}</Text>
+            </Pressable>
+            <Pressable style={styles.secondaryButton} onPress={resetBt} disabled={btConnecting || submitting}>
+              <Text style={styles.secondaryButtonText}>Ngắt</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Chấm công</Text>
+            <Text style={styles.cardHint}>Kiểm tra ảnh + thiết bị trước khi bấm.</Text>
+          </View>
+
+          <View style={styles.kv}>
+            <Text style={styles.k}>Hôm nay</Text>
+            <Text style={styles.v}>{todayCountsLoading ? 'Đang tải...' : `Vào: ${todayInCount} • Ra: ${todayOutCount}`}</Text>
+          </View>
+
+          <Pressable
+            style={[styles.primaryButton, !(photoUri && projectId) ? styles.buttonDisabled : null]}
+            onPress={() => startSubmit(nextActionType)}
+            disabled={submitting || todayCountsLoading || !(photoUri && projectId)}
+          >
+            {submitting ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.primaryButtonText}>{nextActionType === 'in' ? 'Chấm vào' : 'Chấm ra'}</Text>
+            )}
+          </Pressable>
+          {!photoUri || !projectId ? (
+            <Text style={styles.helperText}>
+              {!photoUri ? '• Cần chụp ảnh xác thực.' : ''} {!projectId ? '• Cần kết nối Bluetooth để xác định dự án.' : ''}
+            </Text>
+          ) : null}
+        </View>
+      </ScrollView>
 
       <Modal transparent visible={explainOpen} animationType="fade" onRequestClose={() => setExplainOpen(false)}>
         <View style={styles.modalBackdrop}>
@@ -402,28 +457,61 @@ export default function AttendanceScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#F4F4F5', gap: 12 },
-  section: { backgroundColor: 'white', borderRadius: 16, padding: 14, gap: 10, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#111827' },
-  cameraWrap: { height: 260, borderRadius: 14, overflow: 'hidden', backgroundColor: '#111827' },
+  container: { flex: 1, backgroundColor: '#F4F4F5' },
+  scrollContent: { padding: 16, paddingBottom: 28, gap: 12 },
+  header: { gap: 4, paddingHorizontal: 2, paddingBottom: 4 },
+  title: { fontSize: 22, fontWeight: '900', color: '#111827' },
+  subtitle: { fontSize: 12, fontWeight: '700', color: '#6B7280' },
+
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 14,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  cardHeader: { gap: 2 },
+  cardTitle: { fontSize: 16, fontWeight: '900', color: '#111827' },
+  cardHint: { fontSize: 12, fontWeight: '700', color: '#6B7280' },
+
+  cameraWrap: { height: 320, borderRadius: 16, overflow: 'hidden', backgroundColor: '#111827' },
   camera: { flex: 1 },
   cameraBlocked: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 16 },
   cameraBlockedTitle: { color: 'white', fontSize: 16, fontWeight: '900', textAlign: 'center' },
   cameraBlockedSub: { color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: '700', textAlign: 'center' },
-  photoTaken: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
-  photoTakenText: { color: 'white', fontSize: 16, fontWeight: '700' },
+
+  cameraControls: { position: 'absolute', left: 12, right: 12, bottom: 12 },
+  captureButton: {
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  captureButtonText: { color: '#111827', fontSize: 16, fontWeight: '900' },
+
+  photoPreview: { flex: 1 },
+  photo: { width: '100%', height: '100%' },
+  photoOverlay: { position: 'absolute', left: 12, right: 12, bottom: 12, gap: 8 },
+  photoOverlayText: { color: 'white', fontSize: 14, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.6)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
+  ghostButton: { height: 44, borderRadius: 14, backgroundColor: 'rgba(17,24,39,0.7)', alignItems: 'center', justifyContent: 'center' },
+  ghostButtonText: { color: 'white', fontSize: 14, fontWeight: '900' },
+
   row: { flexDirection: 'row', gap: 10, alignItems: 'center' },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  label: { color: '#6B7280', fontSize: 12, fontWeight: '700' },
-  value: { color: '#111827', fontSize: 12, fontWeight: '700', flexShrink: 1, textAlign: 'right' },
-  valueMono: { color: '#111827', fontSize: 12, fontWeight: '700', fontFamily: 'Courier', flexShrink: 1, textAlign: 'right' },
+  kv: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, alignItems: 'center' },
+  k: { color: '#6B7280', fontSize: 12, fontWeight: '800' },
+  v: { color: '#111827', fontSize: 12, fontWeight: '800', flexShrink: 1, textAlign: 'right' },
+  vMono: { color: '#111827', fontSize: 12, fontWeight: '800', fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }), flexShrink: 1, textAlign: 'right' },
+
   primaryButton: { flex: 1, height: 48, borderRadius: 12, backgroundColor: '#111827', alignItems: 'center', justifyContent: 'center' },
   primaryButtonText: { color: 'white', fontSize: 16, fontWeight: '800' },
   secondaryButton: { height: 48, paddingHorizontal: 16, borderRadius: 12, backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center' },
   secondaryButtonText: { color: '#111827', fontSize: 14, fontWeight: '800' },
-  smallButton: { height: 40, paddingHorizontal: 14, borderRadius: 12, backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center' },
-  smallButtonText: { color: '#111827', fontSize: 14, fontWeight: '800' },
   buttonDisabled: { opacity: 0.5 },
+  helperText: { marginTop: 6, color: '#6B7280', fontSize: 12, fontWeight: '700' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', padding: 20 },
   modalCard: { backgroundColor: 'white', borderRadius: 16, padding: 16, gap: 10 },
   modalTitle: { fontSize: 18, fontWeight: '900', color: '#111827' },

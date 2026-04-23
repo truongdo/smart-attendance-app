@@ -1,9 +1,6 @@
 import type { Theme } from '@react-navigation/native';
-import { Platform } from 'react-native';
 
 import { Colors } from '@/constants/theme';
-
-const systemFont = Platform.select({ ios: 'System', android: 'sans-serif', default: 'System' });
 
 export const NavigationThemeLight: Theme = {
   dark: false,
@@ -16,10 +13,10 @@ export const NavigationThemeLight: Theme = {
     notification: Colors.light.primary,
   },
   fonts: {
-    regular: { fontFamily: systemFont, fontWeight: '400' },
-    medium: { fontFamily: systemFont, fontWeight: '500' },
-    bold: { fontFamily: systemFont, fontWeight: '700' },
-    heavy: { fontFamily: systemFont, fontWeight: '800' },
+    regular: { fontFamily: 'Inter_400Regular', fontWeight: 'normal' },
+    medium: { fontFamily: 'Inter_600SemiBold', fontWeight: 'normal' },
+    bold: { fontFamily: 'Inter_700Bold', fontWeight: 'normal' },
+    heavy: { fontFamily: 'Inter_900Black', fontWeight: 'normal' },
   },
 };
 

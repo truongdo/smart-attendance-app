@@ -3,16 +3,38 @@ import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-rout
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
+import * as SplashScreen from 'expo-splash-screen';
+import { useFonts } from 'expo-font';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  Inter_800ExtraBold,
+  Inter_900Black,
+} from '@expo-google-fonts/inter';
+
 import { NavigationThemeLight } from '@/constants/navigationTheme';
 import { useAuthInit } from '@/hooks/useAuthInit';
 import { useAuthStore } from '@/stores/authStore';
 import { useEffect } from 'react';
+
+SplashScreen.preventAutoHideAsync();
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+    Inter_900Black,
+  });
+
   useAuthInit();
   const { user, loading } = useAuthStore();
   const segments = useSegments();
@@ -29,6 +51,14 @@ export default function RootLayout() {
       router.replace('/' as any);
     }
   }, [loading, rootNavState?.key, router, segments, user]);
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) return null;
 
   return (
     <ThemeProvider value={NavigationThemeLight}>

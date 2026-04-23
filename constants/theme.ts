@@ -83,11 +83,11 @@ export const Space = {
 } as const;
 
 export const Typography = {
-  title: { fontSize: 26, letterSpacing: -0.4, fontWeight: '900' as const },
-  h2: { fontSize: 18, letterSpacing: -0.2, fontWeight: '900' as const },
-  label: { fontSize: 12, letterSpacing: 0.1, fontWeight: '800' as const },
-  body: { fontSize: 14, fontWeight: '700' as const },
-  caption: { fontSize: 12, fontWeight: '700' as const },
+  title: { fontSize: 26, letterSpacing: -0.4, fontFamily: 'Inter_900Black' as const },
+  h2: { fontSize: 18, letterSpacing: -0.2, fontFamily: 'Inter_800ExtraBold' as const },
+  label: { fontSize: 12, letterSpacing: 0.1, fontFamily: 'Inter_700Bold' as const },
+  body: { fontSize: 14, fontFamily: 'Inter_600SemiBold' as const },
+  caption: { fontSize: 12, fontFamily: 'Inter_600SemiBold' as const },
 } as const;
 
 export const Fonts = Platform.select({

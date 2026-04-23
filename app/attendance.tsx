@@ -1,32 +1,32 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  PermissionsAndroid,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, where } from 'firebase/firestore';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    PermissionsAndroid,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/input';
 import { Colors, Radii, Typography } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { formatDateYmd, needsExplanation } from '@/lib/attendance';
+import { connectAndDiscover, requestDeviceMac, scanAndConnectFirst } from '@/lib/ble/attendanceDevice';
 import { db } from '@/lib/firebase';
+import { uploadImageFromUri } from '@/lib/storage/upload';
 import { useAuthStore } from '@/stores/authStore';
 import type { Project } from '@/types';
-import { formatDateYmd, needsExplanation } from '@/lib/attendance';
-import { uploadImageFromUri } from '@/lib/storage/upload';
-import { connectAndDiscover, requestDeviceMac, scanAndConnectFirst } from '@/lib/ble/attendanceDevice';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
 type NextType = 'in' | 'out';
 
@@ -374,16 +374,7 @@ export default function AttendanceScreen() {
         <Card style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={[styles.cardTitle, { color: c.text }]}>Thiết bị chấm công</Text>
-            <Text style={[styles.cardHint, { color: c.textMuted }]}>Kết nối Bluetooth để lấy dự án và MAC thiết bị.</Text>
-          </View>
-
-          <View style={styles.kv}>
-            <Text style={[styles.k, { color: c.textMuted }]}>Trạng thái</Text>
-            <Text style={[styles.v, { color: c.text }]}>{btConnectedName ? `Đã kết nối: ${btConnectedName}` : 'Chưa kết nối'}</Text>
-          </View>
-          <View style={styles.kv}>
-            <Text style={[styles.k, { color: c.textMuted }]}>MAC</Text>
-            <Text style={[styles.vMono, { color: c.text }]}>{deviceMac || '—'}</Text>
+            <Text style={[styles.cardHint, { color: c.textMuted }]}>Kết nối thiết bị để lấy dự án.</Text>
           </View>
           <View style={styles.kv}>
             <Text style={[styles.k, { color: c.textMuted }]}>Dự án</Text>
@@ -392,7 +383,7 @@ export default function AttendanceScreen() {
 
           <View style={styles.row}>
             <Button
-              title={btConnecting ? 'Đang kết nối...' : 'Kết nối Bluetooth'}
+              title={btConnecting ? 'Đang kết nối...' : 'Kết nối thiết bị '}
               onPress={connectBtAndLoadProject}
               loading={btConnecting}
               disabled={submitting}

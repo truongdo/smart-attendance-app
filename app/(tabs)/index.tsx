@@ -78,64 +78,67 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Card>
-          <View style={styles.headerRow}>
-            <Text style={[styles.hi, { color: c.textMuted }]}>Xin chào</Text>
-            <Pressable style={styles.logoutButton} onPress={confirmLogout} disabled={signingOut}>
-              <Text style={[styles.logoutText, { color: c.text }, signingOut ? styles.logoutTextDisabled : null]}>
-                {signingOut ? 'Đang thoát...' : 'Đăng xuất'}
-              </Text>
-            </Pressable>
-          </View>
-          <Text style={[styles.name, { color: c.text }]} numberOfLines={2}>
-            {profile?.fullName || user?.displayName || user?.email || 'Người dùng'}
-          </Text>
-          <View style={styles.badges}>
-            <Badge tone={!profile?.isActive ? 'neutral' : 'success'} label={statusLabel} />
-            {profile?.employeeCode ? (
-              <Badge tone="info" label={profile.employeeCode} />
-            ) : null}
-          </View>
+          <View style={styles.cardBody}>
+            <View style={styles.headerRow}>
+              <Text style={[styles.hi, { color: c.textMuted }]}>Xin chào</Text>
+              <Pressable style={styles.logoutButton} onPress={confirmLogout} disabled={signingOut}>
+                <Text style={[styles.logoutText, { color: c.text }, signingOut ? styles.logoutTextDisabled : null]}>
+                  {signingOut ? 'Đang thoát...' : 'Đăng xuất'}
+                </Text>
+              </Pressable>
+            </View>
+            <Text style={[styles.name, { color: c.text }]} numberOfLines={2}>
+              {profile?.fullName || user?.displayName || user?.email || 'Người dùng'}
+            </Text>
+            <View style={styles.badges}>
+              <Badge tone={!profile?.isActive ? 'neutral' : 'success'} label={statusLabel} />
+              {profile?.employeeCode ? <Badge tone="info" label={profile.employeeCode} /> : null}
+            </View>
 
-          <Button title="Chấm công ngay" onPress={() => router.push('/attendance' as any)} />
+            <Button title="Chấm công ngay" onPress={() => router.push('/attendance' as any)} />
+          </View>
         </Card>
 
         <Card>
-          <Text style={[styles.sectionTitle, { color: c.text }]}>Lịch sử gần đây</Text>
-          {loading ? (
-            <View style={styles.centerPad}>
-              <ActivityIndicator />
-            </View>
-          ) : recent.length === 0 ? (
-            <Text style={[styles.empty, { color: c.textMuted }]}>Chưa có dữ liệu chấm công</Text>
-          ) : (
-            <View style={styles.list}>
-              {recent.map((r) => (
-                <View key={r.id} style={styles.row}>
-                  <View
-                    style={[
-                      styles.pill,
-                      {
-                        backgroundColor: r.type === 'in' ? 'rgba(22, 163, 74, 0.14)' : 'rgba(249, 115, 22, 0.14)',
-                        borderColor: c.border,
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.pillText, { color: r.type === 'in' ? c.success : c.warning }]}>
-                      {r.type === 'in' ? 'VÀO' : 'RA'}
-                    </Text>
+          <View style={styles.cardBody}>
+            <Text style={[styles.sectionTitle, { color: c.text }]}>Lịch sử gần đây</Text>
+            {loading ? (
+              <View style={styles.centerPad}>
+                <ActivityIndicator />
+              </View>
+            ) : recent.length === 0 ? (
+              <Text style={[styles.empty, { color: c.textMuted }]}>Chưa có dữ liệu chấm công</Text>
+            ) : (
+              <View style={styles.list}>
+                {recent.map((r) => (
+                  <View key={r.id} style={styles.row}>
+                    <View
+                      style={[
+                        styles.pill,
+                        {
+                          backgroundColor:
+                            r.type === 'in' ? 'rgba(22, 163, 74, 0.14)' : 'rgba(249, 115, 22, 0.14)',
+                          borderColor: c.border,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.pillText, { color: r.type === 'in' ? c.success : c.warning }]}>
+                        {r.type === 'in' ? 'VÀO' : 'RA'}
+                      </Text>
+                    </View>
+                    <View style={styles.rowMain}>
+                      <Text style={[styles.projectName, { color: c.text }]} numberOfLines={1}>
+                        {r.projectName || r.projectId || '—'}
+                      </Text>
+                      <Text style={[styles.sub, { color: c.textMuted }]} numberOfLines={1}>
+                        {r.deviceMac || '—'}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.rowMain}>
-                    <Text style={[styles.projectName, { color: c.text }]} numberOfLines={1}>
-                      {r.projectName || r.projectId || '—'}
-                    </Text>
-                    <Text style={[styles.sub, { color: c.textMuted }]} numberOfLines={1}>
-                      {r.deviceMac || '—'}
-                    </Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
+                ))}
+              </View>
+            )}
+          </View>
         </Card>
       </ScrollView>
     </SafeAreaView>
@@ -146,6 +149,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 16, paddingTop: 12, gap: 12 },
   // Cards handled by <Card />
+  cardBody: { gap: 12 },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   hi: { ...Typography.label },
   logoutButton: { paddingVertical: 6, paddingHorizontal: 8, marginRight: -8 },
@@ -156,18 +160,18 @@ const styles = StyleSheet.create({
   sectionTitle: { ...Typography.h2 },
   centerPad: { paddingVertical: 14, alignItems: 'center' },
   empty: { ...Typography.caption },
-  list: { gap: 10 },
-  row: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  list: { gap: 12 },
+  row: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   pill: {
     width: 52,
-    height: 34,
+    height: 38,
     borderRadius: Radii.md,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,
   },
   pillText: { fontSize: 11, fontWeight: '900' },
-  rowMain: { flex: 1, gap: 2 },
+  rowMain: { flex: 1, gap: 4 },
   projectName: { fontSize: 13, fontWeight: '900' },
   sub: {
     fontSize: 11,

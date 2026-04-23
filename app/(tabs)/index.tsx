@@ -9,10 +9,10 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Colors, Radii, Typography } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { auth, db } from '@/lib/firebase';
 import { useAuthStore } from '@/stores/authStore';
 import type { AttendanceRecord } from '@/types';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
@@ -23,6 +23,25 @@ export default function DashboardScreen() {
   const [recent, setRecent] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
+
+  const getRecordDateTime = (r: AttendanceRecord) => {
+    const ts: any = (r as any)?.timestamp;
+    if (ts?.toDate) return ts.toDate() as Date;
+    const created: any = (r as any)?.createdAt;
+    if (created?.toDate) return created.toDate() as Date;
+    if (r?.date) return new Date(`${r.date}T00:00:00`);
+    return null;
+  };
+
+  const formatDateTimeVi = (d: Date) =>
+    new Intl.DateTimeFormat('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour12: false,
+    }).format(d);
 
   const statusLabel = useMemo(() => {
     if (!profile) return '—';
@@ -130,9 +149,12 @@ export default function DashboardScreen() {
                       <Text style={[styles.projectName, { color: c.text }]} numberOfLines={1}>
                         {r.projectName || r.projectId || '—'}
                       </Text>
-                      <Text style={[styles.sub, { color: c.textMuted }]} numberOfLines={1}>
-                        {r.deviceMac || '—'}
-                      </Text>
+                      
+                      {getRecordDateTime(r) ? (
+                        <Text style={[styles.meta, { color: c.textMuted }]} numberOfLines={1}>
+                          {formatDateTimeVi(getRecordDateTime(r) as Date)}
+                        </Text>
+                      ) : null}
                     </View>
                   </View>
                 ))}
@@ -178,5 +200,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
   },
+  meta: { fontSize: 11, fontWeight: '700' },
 });
 

@@ -36,6 +36,7 @@ export default function AttendanceScreen() {
   const scheme = useColorScheme();
   const c = Colors[scheme];
   const managerRef = useRef<any>(null);
+  const cameraFacing: 'front' | 'back' = 'front';
 
   const getBleManager = () => {
     if (managerRef.current) return managerRef.current;
@@ -108,7 +109,8 @@ export default function AttendanceScreen() {
         } catch {
           // ignore
         }
-        err ? reject(err) : resolve();
+        if (err) reject(err);
+        else resolve();
       };
 
       const timer = setTimeout(() => finish(new Error('BluetoothLE đang khởi tạo. Vui lòng bật Bluetooth và thử lại.')), timeoutMs);
@@ -258,7 +260,13 @@ export default function AttendanceScreen() {
     }
     const cam: any = cameraRef.current as any;
     if (!cam?.takePictureAsync) return;
-    const photo = await cam.takePictureAsync({ quality: 0.95, exif: false, skipProcessing: true });
+    const photo = await cam.takePictureAsync({
+      quality: 0.95,
+      exif: false,
+      skipProcessing: true,
+      // For front camera, prefer a non-mirrored capture.
+      mirror: false,
+    });
     setPhotoUri(photo.uri);
   };
 
@@ -344,7 +352,7 @@ export default function AttendanceScreen() {
           <View style={[styles.cameraWrap, { backgroundColor: c.text }]}>
             {photoUri ? (
               <View style={styles.photoPreview}>
-                <Image source={{ uri: photoUri }} style={styles.photo} />
+                <Image source={{ uri: photoUri }} style={[styles.photo, cameraFacing === 'front' && styles.photoFrontFix]} />
                 <View style={styles.photoOverlay}>
                   <Text style={styles.photoOverlayText}>Ảnh đã chụp</Text>
                   <Button title="Chụp lại" variant="ghost" onPress={() => setPhotoUri(null)} disabled={submitting} style={styles.ghostButton} textStyle={styles.ghostButtonText as any} />
@@ -352,7 +360,7 @@ export default function AttendanceScreen() {
               </View>
             ) : cameraPerm?.granted ? (
               <>
-                <CameraView ref={cameraRef as any} style={styles.camera} facing="front" />
+                <CameraView ref={cameraRef as any} style={styles.camera} facing={cameraFacing} />
                 <View style={styles.cameraControls}>
                   <Pressable style={styles.captureButton} onPress={capture} disabled={submitting}>
                     {submitting ? <ActivityIndicator color={c.text} /> : <Text style={[styles.captureButtonText, { color: c.text }]}>Chụp ảnh</Text>}
@@ -472,6 +480,7 @@ const styles = StyleSheet.create({
 
   photoPreview: { flex: 1 },
   photo: { width: '100%', height: '100%' },
+  photoFrontFix: { transform: [{ scaleX: -1 }] },
   photoOverlay: { position: 'absolute', left: 12, right: 12, bottom: 12, gap: 8 },
   photoOverlayText: { color: 'white', fontSize: 14, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.6)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
   ghostButton: { height: 44, borderRadius: Radii.md, backgroundColor: 'rgba(2, 6, 23, 0.65)', borderWidth: 0 },

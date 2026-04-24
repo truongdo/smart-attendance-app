@@ -1,6 +1,8 @@
-# Welcome to your Expo app 👋
+# Project git repos
+- git@github.com:truongdo/fsi-chamcong.git - admin/web user app
+- git@github.com:truongdo/smart-attendance-firmware.git - firmware
+- git@github.com:truongdo/smart-attendance-app.git - react native app
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
 ## Get started
 
@@ -10,13 +12,7 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Build cloud
-
-   ```bash
-    eas build --profile development --platform ios
-   ```
-
-3. If build local (no cloud)
+2. If build local (no cloud)
 ```
 npx expo run:ios --device
 ```

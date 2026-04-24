@@ -5,6 +5,8 @@ import {
     ActivityIndicator,
     Alert,
     Image,
+    Keyboard,
+    KeyboardAvoidingView,
     Modal,
     PermissionsAndroid,
     Platform,
@@ -427,25 +429,52 @@ export default function AttendanceScreen() {
         </ScrollView>
 
       <Modal transparent visible={explainOpen} animationType="fade" onRequestClose={() => setExplainOpen(false)}>
-        <View style={[styles.modalBackdrop, { paddingBottom: Math.max(20, insets.bottom + 12), paddingTop: Math.max(20, insets.top + 12) }]}>
-          <View style={[styles.modalCard, { backgroundColor: c.surface, borderColor: c.border }]}>
-            <Text style={[styles.modalTitle, { color: c.text }]}>Yêu cầu giải trình</Text>
-            <Text style={[styles.modalSubtitle, { color: c.textMuted }]}>Vui lòng nhập lý do.</Text>
-            <Input
-              style={styles.textArea}
-              multiline
-              placeholder="Nhập lý do..."
-              value={explanation}
-              onChangeText={setExplanation}
-              editable={!submitting}
-              variant="multiline"
-            />
-            <View style={styles.row}>
-              <Button title="Hủy" variant="secondary" onPress={() => setExplainOpen(false)} disabled={submitting} />
-              <Button title="Gửi" onPress={() => finalizeSubmit(pendingType, explanation)} disabled={!explanation.trim()} loading={submitting} style={styles.flex1 as any} />
-            </View>
-          </View>
-        </View>
+        <KeyboardAvoidingView
+          style={styles.modalBackdrop}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? Math.max(0, insets.top) : 0}
+        >
+          <Pressable
+            style={[
+              styles.modalBackdropInner,
+              { paddingBottom: Math.max(20, insets.bottom + 12), paddingTop: Math.max(20, insets.top + 12) },
+            ]}
+            onPress={() => Keyboard.dismiss()}
+          >
+            <Pressable
+              style={[styles.modalCard, { backgroundColor: c.surface, borderColor: c.border }]}
+              onPress={() => {}}
+            >
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.modalContent}
+              >
+                <Text style={[styles.modalTitle, { color: c.text }]}>Yêu cầu giải trình</Text>
+                <Text style={[styles.modalSubtitle, { color: c.textMuted }]}>Vui lòng nhập lý do.</Text>
+                <Input
+                  style={styles.textArea}
+                  multiline
+                  placeholder="Nhập lý do..."
+                  value={explanation}
+                  onChangeText={setExplanation}
+                  editable={!submitting}
+                  variant="multiline"
+                />
+                <View style={styles.row}>
+                  <Button title="Hủy" variant="secondary" onPress={() => setExplainOpen(false)} disabled={submitting} />
+                  <Button
+                    title="Gửi"
+                    onPress={() => finalizeSubmit(pendingType, explanation)}
+                    disabled={!explanation.trim()}
+                    loading={submitting}
+                    style={styles.flex1 as any}
+                  />
+                </View>
+              </ScrollView>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
       </View>
     </SafeAreaView>
@@ -500,8 +529,16 @@ const styles = StyleSheet.create({
 
   flex1: { flex: 1 },
   helperText: { marginTop: 6, ...Typography.caption },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', paddingHorizontal: 20 },
-  modalCard: { borderRadius: Radii.lg, padding: 16, gap: 10, elevation: 4, borderWidth: StyleSheet.hairlineWidth },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
+  modalBackdropInner: { flex: 1, justifyContent: 'center', paddingHorizontal: 20 },
+  modalCard: {
+    borderRadius: Radii.lg,
+    padding: 16,
+    elevation: 4,
+    borderWidth: StyleSheet.hairlineWidth,
+    maxHeight: '85%',
+  },
+  modalContent: { gap: 10 },
   modalTitle: { ...Typography.h2 },
   modalSubtitle: { ...Typography.caption, fontWeight: '700' },
   textArea: {},

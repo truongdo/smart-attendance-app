@@ -1,6 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore - base-64 doesn't ship types in this project
 import { decode as b64decode, encode as b64encode } from 'base-64';
+import { Platform } from 'react-native';
 
 export const FIRMWARE_SERVICE_UUID = '08f7e6d5-c4b3-a291-807f-6e5d4c3b2a7e';
 export const CODE_CHAR_UUID = 'faebdccd-beaf-9081-7263-544536271809';
@@ -76,7 +77,7 @@ export async function requestDeviceMac(manager: any, device: any): Promise<strin
       const timeout = setTimeout(() => {
         if (sub) sub.remove();
         reject(new Error('Timed out waiting for MAC.'));
-      }, 2500);
+      }, Platform.OS === 'android' ? 6000 : 5000);
 
       sub = device.monitorCharacteristicForService(FIRMWARE_SERVICE_UUID, CODE_CHAR_UUID, (error: any, ch: any) => {
         if (error) {
@@ -97,11 +98,27 @@ export async function requestDeviceMac(manager: any, device: any): Promise<strin
       });
     });
 
-    await device.writeCharacteristicWithResponseForService(
-      FIRMWARE_SERVICE_UUID,
-      REQUEST_CHAR_UUID,
-      reqBytesB64,
-    );
+    const tryWriteReq = async () => {
+      await device.writeCharacteristicWithResponseForService(FIRMWARE_SERVICE_UUID, REQUEST_CHAR_UUID, reqBytesB64);
+    };
+
+    try {
+      await tryWriteReq();
+    } catch (e: any) {
+      // When the firmware requires an encrypted link, Android may need an explicit bond step.
+      const canBond = Platform.OS === 'android' && typeof device?.createBond === 'function';
+      if (!canBond) throw e;
+      try {
+        await device.createBond();
+        // Some Android stacks require rediscovery after bonding/encryption state changes.
+        if (typeof device?.discoverAllServicesAndCharacteristics === 'function') {
+          await device.discoverAllServicesAndCharacteristics();
+        }
+      } catch {
+        // Fall through to original error for clearer debugging upstream.
+      }
+      await tryWriteReq();
+    }
 
     const mac = await valuePromise;
     return normalizeMacUpperColon(mac);
